@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deteksi Cacat Las - YOLOv8</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background: #f2f6fc;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 30px 20px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 25px;
+            text-align: center;
+            color: #1a73e8;
+        }
+
+        .upload-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px dashed #1a73e8;
+            border-radius: 8px;
+            background-color: #f0f8ff;
+            cursor: pointer;
+        }
+
+        button {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #155ab6;
+        }
+
+        #result {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        #result img {
+            max-width: 100%;
+            border-radius: 12px;
+            margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1a73e8;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        #legend ul li {
+            margin-bottom: 8px;
+        }
+
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-microscope"></i> Deteksi Cacat Las</h1>
+        <div id="legend" style="margin-top: 25px;">
+            <h3 style="font-size: 18px; color: #1a73e8; text-align: center;">📌 Panduan Kategori Deteksi</h3>
+            <ul style="list-style: none; padding: 0 15px; font-size: 14px; line-height: 1.6;">
+                <li><span style="color: green; font-weight: bold;">🟩 Good Weld</span>: Hasil pengelasan yang baik.</li>
+                <li><span style="color: orange; font-weight: bold;">🟧 Bad Weld</span>: Hasil pengelasan yang kurang baik.</li>
+                <li><span style="color: red; font-weight: bold;">🟥 Defect</span>: Terdeteksi cacat yang nyata pada hasil las.</li>
+            </ul>
+        </div>
+        <div class="upload-section">
+            <div class="file-input-wrapper">
+                <input type="file" id="imageInput" accept="image/*">
+            </div>
+            <button onclick="uploadImage()">
+                <i class="fas fa-upload"></i> Upload & Deteksi
+            </button>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function uploadImage() {
+            const input = document.getElementById('imageInput');
+            const result = document.getElementById('result');
+            result.innerHTML = '<div class="loader"></div>';
+
+            const file = input.files[0];
+            if (!file) {
+                result.innerHTML = "<p style='color:red;'>Silakan pilih gambar terlebih dahulu.</p>";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.image_url) {
+                    result.innerHTML = `<img src="${data.image_url}" alt="Hasil Deteksi">`;
+                } else {
+                    result.innerHTML = "<p style='color:red;'>Terjadi kesalahan dalam prediksi.</p>";
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                result.innerHTML = "<p style='color:red;'>Gagal mengunggah gambar.</p>";
+            });
+        }
+    </script>
+</body>
+</html>
