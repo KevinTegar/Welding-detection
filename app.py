@@ -8,11 +8,28 @@ import gradio as gr
 from ultralytics import YOLO
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
+import os
+from datetime import datetime
 
 
 # Load model - use LFS-tracked model from repo
 MODEL_PATH = "model/hyp_param_3.pt"
+OUTPUT_DIR = "static/outputs"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 model = YOLO(MODEL_PATH)
+CLASS_NAMES = model.names
+
+# Color scheme - Industrial theme
+COLORS = {
+    'primary': '#1a73e8',      # Blue
+    'secondary': '#f57c00',    # Orange
+    'success': '#4caf50',      # Green (Good Weld)
+    'warning': '#ffc107',      # Yellow (Bad Weld)
+    'danger': '#f44336',       # Red (Defect)
+    'light_bg': '#ffffff',
+    'dark_bg': '#1a1a1a',
+}
 
 
 def iou(boxA, boxB):
@@ -58,6 +75,15 @@ def improved_nms(results, iou_threshold=0.5):
             'cls': int(cls[idx])
         })
     return final
+
+
+def save_output_image(img):
+    """Save annotated image and return path."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"welding_detection_{timestamp}.jpg"
+    filepath = os.path.join(OUTPUT_DIR, filename)
+    img.save(filepath, "JPEG", quality=95)
+    return filepath, filename
 
 
 def detect_welding(image, conf_threshold=0.25):
@@ -126,10 +152,6 @@ def detect_welding(image, conf_threshold=0.25):
 # Gradio Interface
 with gr.Blocks(
     title="Deteksi Cacat Las - YOLOv8",
-    theme=gr.themes.Soft(
-        primary_hue="blue",
-        secondary_hue="gray",
-    )
 ) as demo:
     gr.Markdown(
         """
@@ -195,4 +217,4 @@ with gr.Blocks(
 
 
 if __name__ == "__main__":
-    demo.launch(debug=True)
+    demo.launch(server_name="0.0.0.0", server_port=7860)
