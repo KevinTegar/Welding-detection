@@ -88,17 +88,17 @@ def save_output_image(img):
 
 def detect_welding(image, conf_threshold=0.25):
     """
-    Detect welding defects in the uploaded image.
+    Detect welding defects with bounding boxes and save output.
 
     Args:
         image: PIL Image or numpy array
         conf_threshold: Confidence threshold for detections
 
     Returns:
-        Annotated image with bounding boxes
+        tuple: (annotated_image, detection_summary_list, output_filepath)
     """
     if image is None:
-        return None
+        return None, [], None
 
     # Convert to PIL if numpy array
     if not isinstance(image, Image.Image):
@@ -112,23 +112,30 @@ def detect_welding(image, conf_threshold=0.25):
     img = image.convert("RGB")
     draw = ImageDraw.Draw(img)
 
+    # Font setup
     try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 20)
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
     except:
         try:
-            font = ImageFont.truetype("arial.ttf", 20)
+            font = ImageFont.truetype("arial.ttf", 18)
         except:
             font = ImageFont.load_default()
 
-    class_names = model.names
-    color_map = ['orange', 'red', 'green']
+    # Color mapping: index -> (name, RGB)
+    # 0=Bad Weld (Yellow), 1=Defect (Red), 2=Good Weld (Green)
+    color_map = [
+        ('#ffc107', (255, 193, 7)),   # Bad Weld - Yellow
+        ('#f44336', (244, 67, 54)),  # Defect - Red
+        ('#4caf50', (76, 175, 80)),  # Good Weld - Green
+    ]
 
     detection_summary = []
 
     for box_info in filtered_boxes:
         x1, y1, x2, y2 = [int(c) for c in box_info['box']]
-        label = f"{class_names[box_info['cls']]} {box_info['conf']:.2f}"
-        color_name = color_map[box_info['cls'] % len(color_map)]
+        cls_idx = box_info['cls'] % len(color_map)
+        color_name, color_rgb = color_map[cls_idx]
+        label = f"{CLASS_NAMES[box_info['cls']]} {box_info['conf']:.2f}"
 
         # Draw bounding box
         draw.rectangle([x1, y1, x2, y2], outline=color_name, width=3)
@@ -139,14 +146,19 @@ def detect_welding(image, conf_threshold=0.25):
         text_height = bbox[3] - bbox[1]
 
         # Draw label background
-        draw.rectangle([x1, y1 - text_height - 4, x1 + text_width, y1], fill=color_name)
+        draw.rectangle([x1, y1 - text_height - 6, x1 + text_width + 4, y1], fill=color_name)
+        draw.text((x1 + 2, y1 - text_height - 4), label, fill='white', font=font)
 
-        # Draw text
-        draw.text((x1, y1 - text_height - 2), label, fill='white', font=font)
+        detection_summary.append({
+            'class': CLASS_NAMES[box_info['cls']],
+            'confidence': round(float(box_info['conf']), 2),
+            'bbox': [int(c) for c in box_info['box']]
+        })
 
-        detection_summary.append(f"{label}")
+    # Save output image
+    output_path, output_filename = save_output_image(img)
 
-    return img, detection_summary
+    return img, detection_summary, output_path
 
 
 # Gradio Interface
