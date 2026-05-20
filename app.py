@@ -20,6 +20,33 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 model = YOLO(MODEL_PATH)
 CLASS_NAMES = model.names
 
+THEME_JS = """
+<script>
+function toggleTheme() {
+    var body = document.querySelector('body');
+    var header = document.querySelector('#welding-header');
+    var legend = document.querySelector('#welding-legend');
+    var footer = document.querySelector('#welding-footer');
+
+    if (body.style.backgroundColor === 'rgb(26, 26, 26)') {
+        // Switch to light
+        body.style.backgroundColor = '#ffffff';
+        body.style.color = '#333333';
+        if (header) { header.style.background = 'linear-gradient(135deg, #1a73e8, #0d47a1)'; header.style.color = 'white'; }
+        if (legend) { legend.style.background = '#f5f5f5'; legend.style.color = '#333333'; }
+        if (footer) { footer.style.background = '#f5f5f5'; footer.style.color = '#333333'; }
+    } else {
+        // Switch to dark
+        body.style.backgroundColor = '#1a1a1a';
+        body.style.color = '#f5f5f5';
+        if (header) { header.style.background = 'linear-gradient(135deg, #1565c0, #0d47a1)'; header.style.color = 'white'; }
+        if (legend) { legend.style.background = '#2d2d2d'; legend.style.color = '#f5f5f5'; }
+        if (footer) { footer.style.background = '#2d2d2d'; footer.style.color = '#f5f5f5'; }
+    }
+}
+</script>
+"""
+
 # Color scheme - Industrial theme
 COLORS = {
     'primary': '#1a73e8',      # Blue
@@ -161,25 +188,68 @@ def detect_welding(image, conf_threshold=0.25):
     return img, detection_summary, output_path
 
 
+def build_header():
+    return gr.Markdown("""
+    <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; border-radius: 12px; margin-bottom: 20px;">
+        <h1 style="margin: 0;">🔬 Deteksi Cacat Las - YOLOv8</h1>
+        <p style="margin: 10px 0 0 0; opacity: 0.9;">YOLOv8 trained model for welding defect detection</p>
+    </div>
+    """, elem_id="welding-header")
+
+
+def build_legend():
+    return gr.Markdown("""
+    <div style="display: flex; justify-content: center; gap: 30px; padding: 15px; background: #f5f5f5; border-radius: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="background: #4caf50; color: white; padding: 4px 12px; border-radius: 4px; font-weight: 600;">Good Weld</span>
+            <span>Hasil pengelasan yang baik</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="background: #ffc107; color: white; padding: 4px 12px; border-radius: 4px; font-weight: 600;">Bad Weld</span>
+            <span>Hasil pengelasan yang kurang baik</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="background: #f44336; color: white; padding: 4px 12px; border-radius: 4px; font-weight: 600;">Defect</span>
+            <span>Terdeteksi cacat yang nyata</span>
+        </div>
+    </div>
+    """, elem_id="welding-legend")
+
+
+def build_theme_toggle():
+    return gr.Button(
+        "🌙 Dark Mode",
+        size="sm",
+        variant="secondary",
+        elem_id="theme-toggle"
+    )
+
+
+def build_footer():
+    return gr.Markdown(
+        """
+        ---
+        Built with ❤️ using Gradio & Ultralytics YOLOv8
+        """,
+        elem_id="welding-footer"
+    )
+
+
 # Gradio Interface
 with gr.Blocks(
     title="Deteksi Cacat Las - YOLOv8",
+    theme=gr.themes.Soft(),
+    js=THEME_JS
 ) as demo:
-    gr.Markdown(
-        """
-        # 🔬 Deteksi Cacat Las - YOLOv8
-        Upload gambar untuk mendeteksi cacat las menggunakan model YOLOv8 yang telah ditraining.
-        """
-    )
+    # Header
+    build_header()
 
-    gr.Markdown(
-        """
-        ### 📌 Panduan Kategori Deteksi
-        - 🟩 **Good Weld**: Hasil pengelasan yang baik
-        - 🟧 **Bad Weld**: Hasil pengelasan yang kurang baik
-        - 🟥 **Defect**: Terdeteksi cacat yang nyata pada hasil las
-        """
-    )
+    # Theme toggle row
+    with gr.Row():
+        build_theme_toggle()
+
+    # Legend
+    build_legend()
 
     with gr.Row():
         with gr.Column():
@@ -220,12 +290,8 @@ with gr.Blocks(
         inputs=[input_image]
     )
 
-    gr.Markdown(
-        """
-        ---
-        Built with ❤️ using Gradio & Ultralytics YOLOv8
-        """
-    )
+    # Footer
+    build_footer()
 
 
 if __name__ == "__main__":
